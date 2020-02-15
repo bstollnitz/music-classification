@@ -6,6 +6,8 @@ from urllib.request import urlopen
 import scipy.io.wavfile as wavfile
 
 import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
 
 
 def find_or_create_dir(dir_name: str) -> str:
@@ -30,12 +32,15 @@ def find_or_create_dir(dir_name: str) -> str:
 
 
 def download_remote_data_file(local_data_folder: str, 
-    data_url: str) -> Tuple[str, bool]:
+    url_prefix: str, filename: str) -> Tuple[str, bool]:
     """Downloads data from url if it's not saved locally yet.
 
     Args:
-        data_url (str): The url of the data file we want to download.
-    
+        local_data_folder (str): The local folder where we'll save the 
+        downloaded data.
+        url_prefix (str): The url prefix of the data file we want to download.
+        filename (str): The name of the data file we want to download.
+
     Returns:
         The path to the local file, and a bool indicating whether the file
         was downloaded or not.
@@ -44,7 +49,7 @@ def download_remote_data_file(local_data_folder: str,
     data_dir_path = find_or_create_dir(local_data_folder)
     
     # Download the data file if it doesn't exist.
-    filename = os.path.basename(urlparse(data_url).path)
+    data_url = url_prefix + filename
     data_file_path = os.path.join(data_dir_path, filename)
     downloaded = False
     if not os.path.exists(data_file_path):
@@ -74,3 +79,17 @@ def load_wav_file(local_path: str) -> np.ndarray:
     wav_data = wav_data[:,0]
 
     return (sample_rate, wav_data)
+
+
+def save_image(matrix: np.ndarray, folder: str, filename: str) -> None:
+    """Saves an image, given a properly shaped array of double values.
+    """
+    # We convert image to Viridis colorscale.
+    cm = plt.get_cmap('viridis')
+    color_matrix = cm(matrix)
+    # We convert the values in the image to go from 0 to 255 and be ints.
+    int_matrix = (color_matrix * 255).astype('uint8')
+    # Save matrix as image.
+    image = Image.fromarray(int_matrix)
+    save_path = os.path.join(folder, filename)
+    image.save(save_path)
