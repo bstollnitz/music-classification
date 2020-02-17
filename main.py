@@ -1,17 +1,16 @@
 import os
-from typing import List, Tuple, Dict
+import urllib.request
+from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 from urllib.request import urlopen
-import urllib.request
 
 import numpy as np
-import requests
+import scipy
 import sklearn.metrics
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-import utils_io
 import utils_graph
-
+import utils_io
 
 S3_URL = 'https://bea-portfolio.s3-us-west-2.amazonaws.com/music-classification/'
 
@@ -25,6 +24,8 @@ PLOTS_FOLDER = 'plots'
 NUM_FREQUENCIES = 500
 # We'll slide the Gaussian filter NUM_TIMES times.
 NUM_TIMES = 500
+# Total number of features.
+NUM_FEATURES = NUM_FREQUENCIES*NUM_TIMES
 
 GENRES = {'blues': ['aretha_franklin', 'bb_king', 'john_lee_hooker'],
           'classical': ['handel', 'haydn', 'vivaldi'], 
@@ -206,18 +207,18 @@ def preprocess_data(method: str) -> None:
     _generate_spectrogram_images()
 
 
-def _split_data_band_classification(genre_band_list: np.ndarray) -> Tuple[
+def _split_data_band_classification(genre_band_list: List[str]) -> Tuple[
     np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Gets data and labels for the training and test data set, to be used in 
     band classification.
-    Sets aside the last song+clip for each band for test, and uses all other
+    Sets aside a song+clip for each band for test, and uses all others
     for training.
     """
-    training_data = np.empty((NUM_FREQUENCIES*NUM_TIMES, 0))
+    training_data = np.empty((NUM_FEATURES, 0))
     training_labels = np.empty((1, 0))
-    test_data = np.empty((NUM_FREQUENCIES*NUM_TIMES, 0))
+    test_data = np.empty((NUM_FEATURES, 0))
     test_labels = np.empty((1, 0))
-    for (i, genre_band) in enumerate(genre_band_list):
+    for genre_band in genre_band_list:
         for song in SONGS:
             for clip in CLIPS:
                 filepath = os.path.join(DATA_FOLDER, 
@@ -225,10 +226,35 @@ def _split_data_band_classification(genre_band_list: np.ndarray) -> Tuple[
                 spectrogram = np.load(filepath)['arr_0'].reshape(-1, 1)
                 if song == 'song3' and clip == 'clip3':
                     test_data = np.append(test_data, spectrogram, axis=1)
-                    test_labels = np.append(test_labels, i) 
+                    test_labels = np.append(test_labels, genre_band) 
                 else:
                     training_data = np.append(training_data, spectrogram, axis=1)
-                    training_labels = np.append(training_labels, i)
+                    training_labels = np.append(training_labels, genre_band)
+
+    return (training_data, training_labels, test_data, test_labels)
+
+
+def _split_data_genres() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Gets data and labels for the training and test data set, to be used in 
+    genre classification.
+    Sets aside a song+clip for each band for test, and uses all other
+    for training.
+    """
+    training_data = np.empty((NUM_FEATURES, 0))
+    training_labels = np.empty((1, 0))
+    test_data = np.empty((NUM_FEATURES, 0))
+    test_labels = np.empty((1, 0))
+
+    for filename in CLIP_DATA_FILENAMES:
+        filepath = os.path.join(DATA_FOLDER, filename)
+        spectrogram = np.load(filepath)['arr_0'].reshape(-1, 1)
+        (genre, _, song, clip, _) = tuple(filename.replace('.', '-').split('-'))
+        if song == 'song3' and clip == 'clip3':
+            test_data = np.append(test_data, spectrogram, axis=1)
+            test_labels = np.append(test_labels, genre) 
+        else:
+            training_data = np.append(training_data, spectrogram, axis=1)
+            training_labels = np.append(training_labels, genre)
 
     return (training_data, training_labels, test_data, test_labels)
 
@@ -253,119 +279,167 @@ def _calculate_accuracy(actual: np.ndarray, predictions: np.ndarray) -> None:
     print(f'Accuracy: {accuracy}')
 
 
-def _lda_classification(training_data: np.ndarray, training_labels: np.ndarray,
+def _lda_classification_1(training_data: np.ndarray, training_labels: np.ndarray,
     test_data: np.ndarray, test_labels: np.ndarray) -> None:
     """Classifies using builtin LDA from sklearn.
     """
+    print('Sklearn\'s LDA')
+    # lda = LinearDiscriminantAnalysis(solver='eigen')
     lda = LinearDiscriminantAnalysis()
     lda.fit(training_data.T, training_labels)
     predicted_labels = lda.predict(test_data.T)
     _calculate_accuracy(test_labels, predicted_labels)
 
 
-def _classify_bands(genre_band_list: np.ndarray, title: str) -> None:
-    """Classifies bands using SVD and LDA.
+def _lda_classification_2(training_data: np.ndarray, training_labels: 
+    np.ndarray, test_data: np.ndarray, test_labels: np.ndarray, 
+    title: str) -> None:
+    """Classifies using our own n-class LDA.
     """
-    # Split data into training and test sets, and get labels for both sets.
-    (training_data, training_labels, test_data, 
-        test_labels) = _split_data_band_classification(genre_band_list)
+    print('My LDA')
+    classes = np.unique(training_labels)
+    num_classes = len(classes)
+    num_features = training_data.shape[0]
+
+    # Calculate the mean spectrogram for each class.
+    mu_list = np.empty((num_features, 0))
+    for c in classes:
+        indices = np.argwhere(training_labels == c).flatten()
+        data_in_class = training_data[:, indices]
+        mu = np.mean(data_in_class, axis=1, keepdims=True)
+        mu_list = np.append(mu_list, mu, axis=1)
+    
+    # Mean of the class means.
+    mu = np.mean(mu_list, axis=1)
+
+    # Calculate sb, the variance of the difference between a class mean and 
+    # the average mean.
+    # Calculate sw, the variance within each class.
+    sb = np.zeros((num_features, num_features))
+    sw = np.zeros((num_features, num_features))
+    for (i, c) in enumerate(classes):
+        diff = mu_list[:, i] - mu
+        indices = np.argwhere(training_labels == c).flatten()
+        data_in_class = training_data[:, indices]
+        num_instances = data_in_class.shape[1]
+        sb += num_instances * diff.dot(diff.T)
+        sw += np.cov(data_in_class)
+
+    # Calculate the eigenvectors, and sort them by magnitude of eigenvalues.
+    (eigenvalues, eigenvectors) = scipy.linalg.eig(sb, b=sw)
+    # eigenvalues = np.real(eigenvalues * (np.abs(eigenvalues) > 1e-10))
+    sorted_indices = np.flip(np.argsort(np.abs(eigenvalues)))
+    eigenvectors = eigenvectors[:, sorted_indices]
+    eigenvectors = eigenvectors[:, :num_classes-1]
+    # eigenvalues = eigenvalues[sorted_indices]
+    # eigenvalues = eigenvalues[:num_classes-1]
+
+    # Project training data, test data and centroids into eigenvectors.
+    # projection_matrix = np.diag(eigenvalues**(-1/2)).dot(eigenvectors.T)
+    projection_matrix = eigenvectors.T
+    projected_training_data = projection_matrix.dot(training_data)
+    projected_centroids = projection_matrix.dot(mu_list)
+    projected_test_data = projection_matrix.dot(test_data)
+
+    # Classify the test data.
+    predicted_labels = np.empty((0, ))
+    for i in range(test_data.shape[1]):
+        # Find the closest centroid.
+        distances = np.linalg.norm(projected_centroids - 
+            projected_test_data[:, i].reshape(-1, 1), 
+            ord=2, axis=0)
+        index_min_distance = np.argmin(distances)
+        predicted_labels = np.append(predicted_labels, classes[index_min_distance])
+
+    # Calculate accuracy of prediction.
+    _calculate_accuracy(test_labels, predicted_labels)
+
+    # Visualize classes.
+    utils_graph.graph_classes(projected_training_data, training_labels, 
+        projected_test_data, test_labels, 
+        projected_centroids, classes, PLOTS_FOLDER,
+        f'reduced_subspace_{title}.html')
+
+
+def _classify(training_data: np.ndarray, training_labels: np.ndarray, 
+    test_data: np.ndarray, test_labels: np.ndarray, num_modes: int, 
+    title: str) -> None:
+    """Classifies bands and genres using SVD and LDA.
+    """
+    # String to append to saved files.
+    filename_title = title.replace(' ', '_')
 
     # Perform SVD.
     (u, s, vh) = np.linalg.svd(training_data, full_matrices=False)
 
     # Plot the normalized singular values.
     normalized_s = s / np.sum(s)
-    filename_title = title.replace(' ', '_')
     utils_graph.graph_2d_markers(
         np.asarray(range(1, len(normalized_s)+1)),
-        np.log(normalized_s), 'Mode', 'Log of normalized singular value',
-        f'Singular values for classification of bands from {title}', 
-        PLOTS_FOLDER, 
-        f'singular_values_band_{filename_title}.html')
+        normalized_s, 'Mode', 'Normalized singular value',
+        f'Singular values for classification of {title}',
+        PLOTS_FOLDER,
+        f'singular_values_{filename_title}.html')
 
     # Reduce the training and test data.
     (training_data_reduced, test_data_reduced) = _reduce_data(u, training_data, 
-        test_data, num_modes=24)
+        test_data, num_modes)
 
     # Classify using LDA.
-    _lda_classification(training_data, training_labels, test_data, test_labels)
-
-
-def classify_bands_different_genres() -> None:
-    """Classifies bands from different genres using SVD and LDA.
-    """
-    print('\n***Classifying bands of different genres...')
-    genre_band_list = ['blues-bb_king', 'classical-vivaldi', 'grunge-pearl_jam']
-    _classify_bands(genre_band_list, 'different genres')
+    _lda_classification_1(training_data_reduced, training_labels, 
+        test_data_reduced, test_labels)
+    # _lda_classification_2(training_data_reduced, training_labels, 
+    #     test_data_reduced, test_labels, filename_title)
 
 
 def classify_bands_same_genre() -> None:
     """Classifies bands from the same genre using SVD and LDA.
     """
-    print('\n***Classifying bands of the same genre...')
+    print('\n*** Classifying bands of the same genre ***')
 
     for genre in GENRES:
         print(f'Genre: {genre}')
-        genre_band_list = []
-        bands = GENRES[genre]
-        for band in bands:
-            genre_band = f'{genre}-{band}'
-            genre_band_list.append(genre_band)
-        _classify_bands(genre_band_list, 'same genre')
+
+        # What to classify.
+        genre_band_list = [f'{genre}-{band}' for band in GENRES[genre]]
+
+        # Split data into training and test sets, and get labels for both sets.
+        (training_data, training_labels, test_data, 
+            test_labels) = _split_data_band_classification(genre_band_list)
+
+        _classify(training_data, training_labels, test_data, 
+            test_labels, 20, f'bands of {genre} genre')
 
 
-def _split_data_genres() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Gets data and labels for the training and test data set, to be used in 
-    genre classification.
-    Sets aside the last song+clip for each band for test, and uses all other
-    for training.
+def classify_bands_different_genres() -> None:
+    """Classifies bands from different genres using SVD and LDA.
     """
-    training_data = np.empty((NUM_FREQUENCIES*NUM_TIMES, 0))
-    training_labels = np.empty((1, 0))
-    test_data = np.empty((NUM_FREQUENCIES*NUM_TIMES, 0))
-    test_labels = np.empty((1, 0))
+    print('\n*** Classifying bands of different genres ***')
 
-    for filename in CLIP_DATA_FILENAMES:
-        filepath = os.path.join(DATA_FOLDER, filename)
-        spectrogram = np.load(filepath)['arr_0'].reshape(-1, 1)
-        (genre, _, song, clip, _) = tuple(filename.replace('.', '-').split('-'))
-        if song == 'song3' and clip == 'clip3':
-            test_data = np.append(test_data, spectrogram, axis=1)
-            test_labels = np.append(test_labels, genre) 
-        else:
-            training_data = np.append(training_data, spectrogram, axis=1)
-            training_labels = np.append(training_labels, genre)
+    # What to classify.
+    genre_band_list = ['classical-vivaldi', 'blues-aretha_franklin', 'electronic-aphex_twin']
 
-    return (training_data, training_labels, test_data, test_labels)
+    # Split data into training and test sets, and get labels for both sets.
+    (training_data, training_labels, test_data, 
+        test_labels) = _split_data_band_classification(genre_band_list)
+
+    # Classify.
+    _classify(training_data, training_labels, test_data, 
+        test_labels, 21, 'bands of different genres')
 
 
 def classify_genres() -> None:
-    """Classifies music genres.
+    """Classifies music genres using SVD and LDA.
     """
-    print('\n***Classifying genres...')
+    print('\n*** Classifying genres ***')
 
     # Split data into training and test sets, and get labels for both sets.
     (training_data, training_labels, test_data, 
         test_labels) = _split_data_genres()
 
-    # Perform SVD.
-    (u, s, vh) = np.linalg.svd(training_data, full_matrices=False)
-
-    # Plot the normalized singular values.
-    normalized_s = s / np.sum(s)
-    utils_graph.graph_2d_markers(
-        np.asarray(range(1, len(normalized_s)+1)),
-        np.log(normalized_s), 'Mode', 'Log of normalized singular value',
-        f'Singular values for classification of genres', 
-        PLOTS_FOLDER, 
-        f'singular_values_genres.html')
-
-    # Reduce the training and test data.
-    (training_data_reduced, test_data_reduced) = _reduce_data(u, training_data, 
-        test_data, num_modes=24)
-
-    # Classify using LDA.
-    _lda_classification(training_data, training_labels, test_data, test_labels)
+    # Classify.
+    _classify(training_data, training_labels, test_data, test_labels, 10, 
+        'genres')
 
 
 def main() -> None:
@@ -377,7 +451,7 @@ def main() -> None:
     preprocess_data(method='download')
     classify_bands_different_genres()
     classify_bands_same_genre()
-    classify_genres()
+    # classify_genres()
 
 
 if __name__ == '__main__':
