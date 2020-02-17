@@ -337,8 +337,8 @@ def _lda_classification_2(training_data: np.ndarray, training_labels:
         sw += np.cov(data_in_class)
 
     # Calculate the eigenvectors, and sort them by magnitude of eigenvalues.
-    (eigenvalues, eigenvectors) = scipy.linalg.eigh(sb, b=sw)
-    sorted_indices = np.flip(np.argsort(eigenvalues))
+    (eigenvalues, eigenvectors) = scipy.linalg.eig(sb, b=sw)
+    sorted_indices = np.flip(np.argsort(np.abs(eigenvalues)))
     eigenvectors = eigenvectors[:, sorted_indices]
     eigenvectors = eigenvectors[:, :num_classes-1]
 
