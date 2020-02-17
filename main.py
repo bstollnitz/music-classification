@@ -337,16 +337,12 @@ def _lda_classification_2(training_data: np.ndarray, training_labels:
         sw += np.cov(data_in_class)
 
     # Calculate the eigenvectors, and sort them by magnitude of eigenvalues.
-    (eigenvalues, eigenvectors) = scipy.linalg.eig(sb, b=sw)
-    # eigenvalues = np.real(eigenvalues * (np.abs(eigenvalues) > 1e-10))
-    sorted_indices = np.flip(np.argsort(np.abs(eigenvalues)))
+    (eigenvalues, eigenvectors) = scipy.linalg.eigh(sb, b=sw)
+    sorted_indices = np.flip(np.argsort(eigenvalues))
     eigenvectors = eigenvectors[:, sorted_indices]
     eigenvectors = eigenvectors[:, :num_classes-1]
-    # eigenvalues = eigenvalues[sorted_indices]
-    # eigenvalues = eigenvalues[:num_classes-1]
 
     # Project training data, test data and centroids into eigenvectors.
-    # projection_matrix = np.diag(eigenvalues**(-1/2)).dot(eigenvectors.T)
     projection_matrix = eigenvectors.T
     projected_training_data = projection_matrix.dot(training_data)
     projected_centroids = projection_matrix.dot(mu_list)
