@@ -396,6 +396,23 @@ def _classify(training_data: np.ndarray, training_labels: np.ndarray,
         test_data_reduced, test_labels, title)
 
 
+def classify_bands_different_genres() -> None:
+    """Classifies bands from different genres using SVD and LDA.
+    """
+    print('\n*** Classifying bands of different genres ***')
+
+    # What to classify.
+    genre_band_list = ['electronic-royksopp', 'blues-bb_king', 'grunge-soundgarden']
+
+    # Split data into training and test sets, and get labels for both sets.
+    (training_data, training_labels, test_data, 
+        test_labels) = _split_data_band_classification(genre_band_list)
+
+    # Classify.
+    _classify(training_data, training_labels, test_data, 
+        test_labels, 21, 'bands of different genres')
+
+
 def classify_bands_same_genre() -> None:
     """Classifies bands from the same genre using SVD and LDA.
     """
@@ -413,23 +430,6 @@ def classify_bands_same_genre() -> None:
 
         _classify(training_data, training_labels, test_data, 
             test_labels, 20, f'bands of {genre} genre')
-
-
-def classify_bands_different_genres() -> None:
-    """Classifies bands from different genres using SVD and LDA.
-    """
-    print('\n*** Classifying bands of different genres ***')
-
-    # What to classify.
-    genre_band_list = ['electronic-royksopp', 'blues-bb_king', 'grunge-soundgarden']
-
-    # Split data into training and test sets, and get labels for both sets.
-    (training_data, training_labels, test_data, 
-        test_labels) = _split_data_band_classification(genre_band_list)
-
-    # Classify.
-    _classify(training_data, training_labels, test_data, 
-        test_labels, 21, 'bands of different genres')
 
 
 def classify_genres() -> None:
