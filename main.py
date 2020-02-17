@@ -274,21 +274,32 @@ def _calculate_accuracy(actual: np.ndarray, predictions: np.ndarray) -> None:
     """Calculates the accuracy of predictions.
     """
     accuracy = sklearn.metrics.accuracy_score(actual, predictions)
-    print(f'Predicted test labels: {predictions}')
-    print(f'Actual test labels: {actual}')
-    print(f'Accuracy: {accuracy}')
+    print(f'    Predicted test labels: {predictions}')
+    print(f'    Actual test labels:    {actual}')
+    print(f'    Accuracy: {accuracy * 100:.2f}%')
 
 
-def _lda_classification_1(training_data: np.ndarray, training_labels: np.ndarray,
-    test_data: np.ndarray, test_labels: np.ndarray) -> None:
-    """Classifies using builtin LDA from sklearn.
+def _lda_classification_1(training_data: np.ndarray, training_labels:
+    np.ndarray, test_data: np.ndarray, test_labels: np.ndarray,
+    title: str) -> None:
+    """Classifies using builtin LDA from scikit-learn.
     """
-    print('Sklearn\'s LDA')
-    # lda = LinearDiscriminantAnalysis(solver='eigen')
-    lda = LinearDiscriminantAnalysis()
+    print('- Scikit-learn\'s LDA')
+    lda = LinearDiscriminantAnalysis(solver='eigen')
+    # lda = LinearDiscriminantAnalysis()
     lda.fit(training_data.T, training_labels)
     predicted_labels = lda.predict(test_data.T)
     _calculate_accuracy(test_labels, predicted_labels)
+
+    # Visualize classes.
+    projected_training_data = lda.transform(training_data.T).T
+    projected_test_data = lda.transform(test_data.T).T
+    projected_centroids = lda.transform(lda.means_).T
+    classes = lda.classes_
+    utils_graph.graph_classes(projected_training_data, training_labels, 
+        projected_test_data, test_labels, 
+        projected_centroids, classes, title + ' (sklearn)', PLOTS_FOLDER,
+        f'sklearn_reduced_subspace_{title.replace(" ", "_")}.html')
 
 
 def _lda_classification_2(training_data: np.ndarray, training_labels: 
@@ -296,7 +307,7 @@ def _lda_classification_2(training_data: np.ndarray, training_labels:
     title: str) -> None:
     """Classifies using our own n-class LDA.
     """
-    print('My LDA')
+    print('- My LDA')
     classes = np.unique(training_labels)
     num_classes = len(classes)
     num_features = training_data.shape[0]
@@ -357,8 +368,8 @@ def _lda_classification_2(training_data: np.ndarray, training_labels:
     # Visualize classes.
     utils_graph.graph_classes(projected_training_data, training_labels, 
         projected_test_data, test_labels, 
-        projected_centroids, classes, PLOTS_FOLDER,
-        f'reduced_subspace_{title}.html')
+        projected_centroids, classes, title, PLOTS_FOLDER,
+        f'reduced_subspace_{title.replace(" ", "_")}.html')
 
 
 def _classify(training_data: np.ndarray, training_labels: np.ndarray, 
@@ -366,9 +377,6 @@ def _classify(training_data: np.ndarray, training_labels: np.ndarray,
     title: str) -> None:
     """Classifies bands and genres using SVD and LDA.
     """
-    # String to append to saved files.
-    filename_title = title.replace(' ', '_')
-
     # Perform SVD.
     (u, s, vh) = np.linalg.svd(training_data, full_matrices=False)
 
@@ -379,7 +387,7 @@ def _classify(training_data: np.ndarray, training_labels: np.ndarray,
         normalized_s, 'Mode', 'Normalized singular value',
         f'Singular values for classification of {title}',
         PLOTS_FOLDER,
-        f'singular_values_{filename_title}.html')
+        f'singular_values_{title.replace(" ", "_")}.html')
 
     # Reduce the training and test data.
     (training_data_reduced, test_data_reduced) = _reduce_data(u, training_data, 
@@ -387,9 +395,9 @@ def _classify(training_data: np.ndarray, training_labels: np.ndarray,
 
     # Classify using LDA.
     _lda_classification_1(training_data_reduced, training_labels, 
-        test_data_reduced, test_labels)
-    # _lda_classification_2(training_data_reduced, training_labels, 
-    #     test_data_reduced, test_labels, filename_title)
+        test_data_reduced, test_labels, title)
+    _lda_classification_2(training_data_reduced, training_labels, 
+        test_data_reduced, test_labels, title)
 
 
 def classify_bands_same_genre() -> None:
@@ -398,7 +406,7 @@ def classify_bands_same_genre() -> None:
     print('\n*** Classifying bands of the same genre ***')
 
     for genre in GENRES:
-        print(f'Genre: {genre}')
+        print(f'\nGenre: {genre}')
 
         # What to classify.
         genre_band_list = [f'{genre}-{band}' for band in GENRES[genre]]
@@ -417,7 +425,7 @@ def classify_bands_different_genres() -> None:
     print('\n*** Classifying bands of different genres ***')
 
     # What to classify.
-    genre_band_list = ['classical-vivaldi', 'blues-aretha_franklin', 'electronic-aphex_twin']
+    genre_band_list = ['electronic-royksopp', 'blues-bb_king', 'grunge-soundgarden']
 
     # Split data into training and test sets, and get labels for both sets.
     (training_data, training_labels, test_data, 
@@ -438,7 +446,9 @@ def classify_genres() -> None:
         test_labels) = _split_data_genres()
 
     # Classify.
-    _classify(training_data, training_labels, test_data, test_labels, 10, 
+    # sklearn: 12 modes -> 50% accuracy
+    # mine: 9 or 11 modes -> 50% accuracy
+    _classify(training_data, training_labels, test_data, test_labels, 11,
         'genres')
 
 
@@ -451,7 +461,7 @@ def main() -> None:
     preprocess_data(method='download')
     classify_bands_different_genres()
     classify_bands_same_genre()
-    # classify_genres()
+    classify_genres()
 
 
 if __name__ == '__main__':

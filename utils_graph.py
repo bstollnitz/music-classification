@@ -6,7 +6,7 @@ import plotly.io as pio
 from scipy.spatial import Voronoi
 
 
-COLORS = ['#f4792e', '#24324f', '#c7303b', '#457abf', '#298964', '#ffd769']
+COLORS = ['#f4792e', '#24624f', '#c7303b', '#457abf', '#298964', '#ffd769']
 
 
 def graph_2d_markers(x: np.ndarray, y: np.ndarray, 
@@ -120,7 +120,7 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
 
 def add_voronoi_diagram(fig: go.Figure, points: np.ndarray) -> None:
-    """Adds Voronoi diagrm to figure, according to points.
+    """Adds the Voronoi diagram of the given points to the figure.
     """
     vor = Voronoi(points.T)
     radius = 1000
@@ -136,7 +136,7 @@ def add_voronoi_diagram(fig: go.Figure, points: np.ndarray) -> None:
 
 def graph_classes(training_data: np.ndarray, training_labels: np.ndarray,
     test_data: np.ndarray, test_labels: np.ndarray,
-    centroids: np.ndarray, classes: np.ndarray, 
+    centroids: np.ndarray, classes: np.ndarray, title: str,
     dirname: str, filename: str) -> None:
     """Plots decision boundaries between classes that we'll use to classify 
     new points.
@@ -199,7 +199,7 @@ def graph_classes(training_data: np.ndarray, training_labels: np.ndarray,
     # Plot Voronoi diagram edges.
     add_voronoi_diagram(fig, pca_centroids)
     fig.update_layout(
-        title_text='Classification in reduced subspace',
+        title_text=f'Classification of {title}',
         xaxis_title_text='Canonical coordinate 1',
         yaxis_title_text='Canonical coordinate 2',
         yaxis_scaleanchor = 'x',
