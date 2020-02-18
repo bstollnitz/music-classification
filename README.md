@@ -14,7 +14,7 @@ In this project, I classify 108 music clips from four different genres and three
 
 In my LDA implementation, I solve a generalized eigenvalue problem with the between-class covariance matrix and the within-class covariance matrix. The resulting eigenvectors provide a transformation that maximizes the separation between class centroids while minimizing the variance within classes. I then classify each test point by applying this transformation and finding the closest class centroid. I show how to visualize the process in a 2D plot, using a Voronoi diagram to illustrate the classification boundaries.
 
-From my experiments we conclude that LDA is quite effective at classifying audio clips by band name across different genres, and by band name even within a single genre. However, for the data set that I used, LDA struggled to effectively classify audio clips by genre. The results I obtained from my LDA implementation are consistent with results from the scikit-learn implementation.
+From my experiments I conclude that LDA is quite effective at classifying audio clips by band name across different genres, and by band name even within a single genre. However, for the data set that I used, LDA struggled to effectively classify audio clips by genre. The results I obtained from my LDA implementation are consistent with results from the scikit-learn implementation.
 
 You can find more details in the <a href="https://1drv.ms/b/s!AiCY1Uw6PbEfhd5GXNTlLOwEI62cvA?e=ej1ho2">report</a> for this project.
 
