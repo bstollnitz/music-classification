@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from scipy.spatial import Voronoi
 
-
 COLORS = ['#f4792e', '#24624f', '#c7303b', '#457abf', '#298964', '#ffd769']
 
 
@@ -13,6 +12,21 @@ def graph_2d_markers(x: np.ndarray, y: np.ndarray,
     xaxis_title: str, yaxis_title: str, title: str, 
     dirname: str, filename: str) -> None:
     """Creates a simple 2D plot using markers.
+
+    Args:
+        x (np.ndarray): A vector with the x values.
+
+        y (np.ndarray): A vector with the y values.
+
+        xaxis_title (str): The title of the x axis.
+
+        yaxis_title (str): The title of the y axis.
+
+        title (str): The title of the graph.
+
+        dirname (str): The folder where we want to save the graph.
+
+        filename (str): The name of the file where we'll save the graph.
     """
     path = os.path.join(dirname, filename)
 
@@ -121,6 +135,13 @@ def voronoi_finite_polygons_2d(vor, radius=None):
 
 def add_voronoi_diagram(fig: go.Figure, points: np.ndarray) -> None:
     """Adds the Voronoi diagram of the given points to the figure.
+
+    Args:
+        fig (go.Figure): The Figure object where we'll add the trace with the
+        Voronoi diagram.
+
+        points (np.ndarray): The center points of each polygon in the Voronoi
+        diagram.
     """
     vor = Voronoi(points.T)
     radius = 1000
@@ -140,6 +161,25 @@ def graph_classes(training_data: np.ndarray, training_labels: np.ndarray,
     dirname: str, filename: str) -> None:
     """Plots decision boundaries between classes that we'll use to classify 
     new points.
+
+    Args:
+        training_data (np.ndarray): The training data.
+
+        training_labels (np.ndarray): The training labels.
+
+        test_data (np.ndarray): The test data.
+
+        test_labels (np.ndarray): The test labels.
+
+        centroids (np.ndarray): The means of each class.
+
+        classes (np.ndarray): The names of each class.
+
+        title (str): The title of the graph.
+
+        dirname (str): The local folder where we'll save the graph.
+
+        filename (str): The name of the file where we'll save the graph.
     """
     path = os.path.join(dirname, filename)
 

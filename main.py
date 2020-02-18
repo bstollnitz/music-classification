@@ -286,7 +286,6 @@ def _lda_classification_1(training_data: np.ndarray, training_labels:
     """
     print('- Scikit-learn\'s LDA')
     lda = LinearDiscriminantAnalysis(solver='eigen')
-    # lda = LinearDiscriminantAnalysis()
     lda.fit(training_data.T, training_labels)
     predicted_labels = lda.predict(test_data.T)
     _calculate_accuracy(test_labels, predicted_labels)

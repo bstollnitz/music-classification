@@ -3,11 +3,11 @@ import shutil
 from typing import List, Tuple
 from urllib.parse import urlparse
 from urllib.request import urlopen
-import scipy.io.wavfile as wavfile
 
-import numpy as np
-from PIL import Image
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io.wavfile as wavfile
+from PIL import Image
 
 
 def find_or_create_dir(dir_name: str) -> str:
@@ -63,8 +63,15 @@ def download_remote_data_file(local_data_folder: str,
     return (data_file_path, downloaded)
 
 
-def load_wav_file(local_path: str) -> np.ndarray:
+def load_wav_file(local_path: str) -> Tuple[int, np.ndarray]:
     """Loads a wav file.
+
+    Args:
+        local_path (str): The local path to the wav file.
+
+    Returns:
+        The sample rate and an ndarrary containing the information in the 
+        wav file.
     """
     # sample_rate is measurements per second.
     (sample_rate, wav_data) = wavfile.read(local_path)
@@ -83,6 +90,14 @@ def load_wav_file(local_path: str) -> np.ndarray:
 
 def save_image(matrix: np.ndarray, folder: str, filename: str) -> None:
     """Saves an image, given a properly shaped array of double values.
+
+    Args:
+        matrix (np.ndarray): The matrix containing the information to save
+        as an image. Must have the shape we want the image to have.
+        
+        folder (str): The folder where we want to save the image.
+
+        filename (str): The name of the image file.
     """
     # We convert image to Viridis colorscale.
     cm = plt.get_cmap('viridis')
