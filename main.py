@@ -16,7 +16,7 @@ S3_URL = 'https://bea-portfolio.s3-us-west-2.amazonaws.com/music-classification/
 
 SONGS_FOLDER = 'songs'
 DATA_FOLDER = 'data'
-VISUALIZATIONS_FOLDER = 'visualizations'
+SPECTROGRAMS_FOLDER = 'spectrograms'
 PLOTS_FOLDER = 'plots'
 
 # We'll subsample the frequencies so that we end up roughly with 
@@ -187,11 +187,11 @@ def _generate_spectrogram_images() -> None:
             item_path = os.path.join(DATA_FOLDER, item)
             spectrogram = np.load(item_path)['arr_0']
             image_name = item.replace('.npz', '.png')
-            image_path = os.path.join(VISUALIZATIONS_FOLDER, image_name)
+            image_path = os.path.join(SPECTROGRAMS_FOLDER, image_name)
             if os.path.exists(image_path):
                 break
             print(f'Saving image {image_name}...')
-            utils_io.save_image(spectrogram, VISUALIZATIONS_FOLDER, image_name)
+            utils_io.save_image(spectrogram, SPECTROGRAMS_FOLDER, image_name)
     print('Done generating and saving spectrogram images.')
 
 
@@ -451,7 +451,7 @@ def main() -> None:
     """Main program.
     """
     utils_io.find_or_create_dir(DATA_FOLDER)
-    utils_io.find_or_create_dir(VISUALIZATIONS_FOLDER)
+    utils_io.find_or_create_dir(SPECTROGRAMS_FOLDER)
     utils_io.find_or_create_dir(PLOTS_FOLDER)
     preprocess_data(method='download')
     classify_bands_different_genres()
