@@ -7,7 +7,7 @@ component analysis (PCA), Gabor transform, time-series. <br>
 ## Description
 
 <p float="left">
-  <img src="readme_files/reduced_subspace_bands_of_classical_genre.png?raw=true" width="600" />
+  <img src="https://github.com/bstollnitz/eigenfaces/blob/master/readme_files/reduced_subspace_bands_of_classical_genre.png?raw=true" width="600" />
 </p>
 
 In this project, I classify 108 music clips from four different genres and three different bands per genre, according to band name and genre. I first create a spectrogram per music clip using a Gabor transform with a Gaussian filter. I then reduce the dimensionality of the spectrograms using SVD and PCA. And last, I classify each clip using my own custom implementation of linear discriminant analysis (LDA). I also classify them using scikit-learn's LDA classification to ensure I'm on the right track.
@@ -25,8 +25,16 @@ of my masters in Applied Mathematics.
 
 To run this project:
 
+(Windows)
 ```sh
-conda env create -f environment.yml
+conda env create -f environment_win.yml
+conda activate music-classification
+python main.py
+```
+
+(Mac)
+```sh
+conda env create -f environment_mac.yml
 conda activate music-classification
 python main.py
 ```
