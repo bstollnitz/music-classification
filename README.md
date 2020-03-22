@@ -1,4 +1,4 @@
-# Feature reduction
+# Music classification using LDA
 
 *Technologies:* Python, NumPy, Plotly, Scikit-learn, Scipy. <br>
 *Topics:* linear discriminant analysis (LDA), classification, principal 
