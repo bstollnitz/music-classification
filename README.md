@@ -23,18 +23,10 @@ of my masters in Applied Mathematics.
 
 ## Running
 
-To run this project:
+To run this project on macOS or Windows:
 
-(Windows)
 ```sh
-conda env create -f environment_win.yml
-conda activate music-classification
-python main.py
-```
-
-(Mac)
-```sh
-conda env create -f environment_mac.yml
+conda env create -f environment.yml
 conda activate music-classification
 python main.py
 ```
